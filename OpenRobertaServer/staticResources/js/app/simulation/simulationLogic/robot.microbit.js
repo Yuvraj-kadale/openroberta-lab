@@ -26,6 +26,37 @@ define([ 'simulation.simulation', 'simulation.robot.mbed' ], function(SIM, Mbed)
             yReset : 175,
             rReset : 10,
             colorReset : '#ffffff',
+            rBoth: 15,
+            xBothA: 6,
+            yBothA: 215,
+            xBothB: -6,
+            yBothB: 215,
+            xBothLabel: 23,
+            yBothLabel: 215,
+            draw: function(canvas) {
+                canvas.beginPath();
+                canvas.save();
+                canvas.scale(1, -1);
+                canvas.translate(this.xBothLabel, -this.yBothLabel)
+                canvas.textAlign = "left"
+                canvas.font = "bold 14px Roboto";
+                canvas.textBaseline = "middle"
+                canvas.fillStyle = "black";
+                canvas.fillText("A + B", 0, 0);
+                canvas.restore()
+
+                canvas.globalAlpha = that.buttons.A && that.buttons.B ? 0.7 : 0.6;
+                canvas.fillStyle = this.colorA;
+                canvas.beginPath();
+                canvas.arc(this.xBothA, this.yBothA, this.rBoth, 0, Math.PI * 2);
+                canvas.fill();
+                canvas.fillStyle = this.colorB;
+                canvas.beginPath();
+                canvas.arc(this.xBothB, this.yBothB, this.rBoth, 0, Math.PI * 2);
+                canvas.fill();
+
+                canvas.globalAlpha = 1;
+            }
         };
         this.pin0 = {
             x : -209.5,
@@ -156,22 +187,35 @@ define([ 'simulation.simulation', 'simulation.robot.mbed' ], function(SIM, Mbed)
         var dxReset = startX - this.button.xReset;
         var dyReset = startY + this.button.yReset;
         var Reset = (dxReset * dxReset + dyReset * dyReset < this.button.rReset * this.button.rReset / scsq);
+
+        var dxBothA = startX - this.button.xBothA;
+        var dyBothA = startY + this.button.yBothA;
+        var dxBothB = startX - this.button.xBothB;
+        var dyBothB = startY + this.button.yBothB;
+        var bothA = (Math.pow(dxBothA,2) + Math.pow(dyBothA,2) < Math.pow(this.button.rBoth,2) / scsq);
+        var bothB = (Math.pow(dxBothB,2) + Math.pow(dyBothB,2) < Math.pow(this.button.rBoth,2) / scsq);
+        var bothButtons = bothA || bothB;
+
         var Pin0 = (startX > this.pin0.x) && (-startY > this.pin0.y) && (startX < this.pin0.x + this.pin0.wh) && (-startY < this.pin0.y + this.pin0.wh);
         var Pin1 = (startX > this.pin1.x) && (-startY > this.pin1.y) && (startX < this.pin1.x + this.pin1.wh) && (-startY < this.pin1.y + this.pin1.wh);
         var Pin2 = (startX > this.pin2.x) && (-startY > this.pin2.y) && (startX < this.pin2.x + this.pin2.wh) && (-startY < this.pin2.y + this.pin2.wh);
         // special case, display (center: 0,0) represents light level
         var dxDisplay = startX;
         var dyDisplay = startY + 20;
-        var Display = (dxDisplay * dxDisplay + dyDisplay * dyDisplay < this.display.rLight * this.display.rLight); //   
-        this.display.lightLevel = 100;
-        if (A || B || Reset || Display || Pin0 || Pin1 || Pin2) {
+        var Display = (dxDisplay * dxDisplay + dyDisplay * dyDisplay < this.display.rLight * this.display.rLight); //
+        var lightSliderActive = $('#sliderLight').val() !== "100";
+        if (!lightSliderActive) this.display.lightLevel = 100;
+        if (A || B || Reset || bothButtons || Display || Pin0 || Pin1 || Pin2) {
             if (e.type === 'mousedown') {
                 if (A) {
                     this.buttons.A = true;
                 } else if (B) {
                     this.buttons.B = true;
-                } else if (Display) {
+                } else if (Display && !lightSliderActive) {
                     this.display.lightLevel = 150;
+                } else if (bothButtons) {
+                    this.buttons.A = true;
+                    this.buttons.B = true;
                 } else if (Reset) {
                     this.buttons.Reset = true;
                 } else if (Pin0) {
@@ -181,7 +225,7 @@ define([ 'simulation.simulation', 'simulation.robot.mbed' ], function(SIM, Mbed)
                 } else if (Pin2) {
                     this.pin2.touched = true;
                 }
-            } else if (e.type === 'mousemove' && Display) {
+            } else if (e.type === 'mousemove' && Display && !lightSliderActive) {
                 this.display.lightLevel = 50;
             } else if (e.type === 'mouseup') {
                 this.pin0.touched = false;
@@ -190,7 +234,7 @@ define([ 'simulation.simulation', 'simulation.robot.mbed' ], function(SIM, Mbed)
                 this.buttons.A = false;
                 this.buttons.B = false;
             }
-            if (Display) {
+            if (Display && !lightSliderActive) {
                 $("#robotLayer").css('cursor', 'crosshair');
             } else {
                 $("#robotLayer").css('cursor', 'pointer');
